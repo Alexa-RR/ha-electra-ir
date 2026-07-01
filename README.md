@@ -44,6 +44,14 @@ any IR emitter exposed to the `infrared` platform — e.g. **Broadlink** or
 - Adjusting temperature/fan/swing while the unit is *off* only updates the
   assumed state; nothing is transmitted until the unit is turned on.
 
+## Feelit button (iFeel)
+
+A **Feelit** button is exposed alongside the climate entity. Pressing it sends
+the current room temperature (from the attached temperature sensor, falling
+back to the setpoint) to the AC with Electra's *iFeel* bit set, so the unit
+regulates by that reading. This is **experimental** — Electra's iFeel is not
+fully documented, so behaviour may vary by model.
+
 ## Supported features
 
 Modes (cool, heat, dry, fan-only, auto, off), target temperature (16–30 °C),

@@ -34,5 +34,12 @@
         }
       }
     }
+  },
+  "entity": {
+    "button": {
+      "feelit": {
+        "name": "Feelit"
+      }
+    }
   }
 }

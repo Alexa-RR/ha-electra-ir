@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import logging
+from typing import TYPE_CHECKING
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -10,17 +12,29 @@ from homeassistant.core import HomeAssistant
 
 from .const import CONF_INFRARED_ENTITY_ID
 
+if TYPE_CHECKING:
+    from .climate import ElectraClimate
+
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.CLIMATE]
+PLATFORMS: list[Platform] = [Platform.CLIMATE, Platform.BUTTON]
 
-type ElectraIRConfigEntry = ConfigEntry[None]
+
+@dataclass
+class ElectraRuntimeData:
+    """Runtime data shared between the integration's platforms."""
+
+    climate: ElectraClimate | None = None
+
+
+type ElectraIRConfigEntry = ConfigEntry[ElectraRuntimeData]
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ElectraIRConfigEntry
 ) -> bool:
     """Set up Electra AC (IR) from a config entry."""
+    entry.runtime_data = ElectraRuntimeData()
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     return True

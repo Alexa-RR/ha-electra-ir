@@ -85,7 +85,9 @@ async def async_setup_entry(
             entry.title,
         )
         return
-    async_add_entities([ElectraClimate(entry, emitter)])
+    entity = ElectraClimate(entry, emitter)
+    entry.runtime_data.climate = entity
+    async_add_entities([entity])
 
 
 class ElectraClimate(ClimateEntity, RestoreEntity):
@@ -205,14 +207,33 @@ class ElectraClimate(ClimateEntity, RestoreEntity):
             power_toggle=power_toggle,
         )
 
-    async def _async_transmit(self, power_toggle: bool) -> None:
-        """Encode the current state and send it through the IR emitter."""
-        command = ElectraACCommand(self._build_state(power_toggle))
+    async def _async_send(self, state: ElectraState) -> None:
+        """Encode a state and send it through the IR emitter."""
+        command = ElectraACCommand(state)
         result = infrared.async_send_command(
             self.hass, self._emitter, command, context=self._context
         )
         if inspect.isawaitable(result):
             await result
+
+    async def _async_transmit(self, power_toggle: bool) -> None:
+        """Encode the current state and send it through the IR emitter."""
+        await self._async_send(self._build_state(power_toggle))
+
+    async def async_send_ifeel(self) -> None:
+        """Send an iFeel update: current room temperature with the iFeel bit set.
+
+        Experimental. Electra's iFeel normally has the remote report its own
+        temperature sensor to the AC; here we push the attached HA sensor's
+        reading (falling back to the setpoint) in the iFeel frame.
+        """
+        room_temp = self._attr_current_temperature
+        if room_temp is None:
+            room_temp = self._attr_target_temperature or 24
+        state = self._build_state(power_toggle=False)
+        state.ifeel = True
+        state.temperature = int(round(room_temp))
+        await self._async_send(state)
 
     # --- Climate API -------------------------------------------------------
 
