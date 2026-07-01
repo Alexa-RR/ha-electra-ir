@@ -1,0 +1,20 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Electra AC (IR)",
+        "description": "Select the infrared emitter that will transmit to your Electra air conditioner.",
+        "data": {
+          "name": "Name",
+          "emitter": "IR emitter"
+        }
+      }
+    },
+    "error": {
+      "unknown_emitter": "The selected emitter is no longer available."
+    },
+    "abort": {
+      "no_emitters": "No infrared emitters were found. Set up an IR emitter integration (such as Broadlink or ESPHome) first."
+    }
+  }
+}
