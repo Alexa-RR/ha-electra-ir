@@ -24,7 +24,9 @@ any IR emitter exposed to the `infrared` platform — e.g. **Broadlink** or
    directory (or add this repository to HACS as a custom repository).
 2. Restart Home Assistant.
 3. **Settings → Devices & Services → Add Integration → Electra AC (IR)**.
-4. Pick the IR emitter to transmit through and give the unit a name.
+4. Select the infrared emitter to transmit through (a receiver is optional and
+   reserved for future state sync). The config flow mirrors the built-in LG
+   Infrared integration.
 
 ## Notes
 

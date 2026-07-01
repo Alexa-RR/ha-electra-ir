@@ -28,7 +28,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from . import ElectraIRConfigEntry
-from .const import CONF_EMITTER, DOMAIN, MAX_TEMP, MIN_TEMP
+from .const import CONF_INFRARED_ENTITY_ID, DOMAIN, MAX_TEMP, MIN_TEMP
 from .electra import ElectraACCommand, ElectraFan, ElectraMode, ElectraState
 
 _LOGGER = logging.getLogger(__name__)
@@ -59,7 +59,16 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Electra AC climate entity."""
-    async_add_entities([ElectraClimate(entry)])
+    # Controlling the AC requires an emitter. If only a receiver was configured
+    # there is nothing to control, so no climate entity is created.
+    emitter = entry.data.get(CONF_INFRARED_ENTITY_ID)
+    if emitter is None:
+        _LOGGER.warning(
+            "No infrared emitter configured for %s; climate control unavailable",
+            entry.title,
+        )
+        return
+    async_add_entities([ElectraClimate(entry, emitter)])
 
 
 class ElectraClimate(ClimateEntity, RestoreEntity):
@@ -90,10 +99,10 @@ class ElectraClimate(ClimateEntity, RestoreEntity):
         | ClimateEntityFeature.TURN_OFF
     )
 
-    def __init__(self, entry: ElectraIRConfigEntry) -> None:
+    def __init__(self, entry: ElectraIRConfigEntry, emitter: str) -> None:
         """Initialize the entity."""
         self._entry = entry
-        self._emitter: str = entry.data[CONF_EMITTER]
+        self._emitter = emitter
         self._attr_unique_id = entry.entry_id
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
