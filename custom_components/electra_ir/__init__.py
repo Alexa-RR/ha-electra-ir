@@ -22,7 +22,15 @@ async def async_setup_entry(
 ) -> bool:
     """Set up Electra AC (IR) from a config entry."""
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     return True
+
+
+async def _async_update_listener(
+    hass: HomeAssistant, entry: ElectraIRConfigEntry
+) -> None:
+    """Reload the entry when options change (e.g. the temperature sensor)."""
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(

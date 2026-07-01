@@ -21,5 +21,18 @@
       "already_configured": "This device is already configured with this infrared entity.",
       "no_infrared_entities": "No infrared emitters or receivers were found. Set up an IR emitter integration (such as Broadlink or ESPHome) first."
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Electra AC (IR) options",
+        "data": {
+          "temperature_sensor": "Temperature sensor"
+        },
+        "data_description": {
+          "temperature_sensor": "An existing sensor whose value is shown as the current temperature. Leave empty for none."
+        }
+      }
+    }
   }
 }

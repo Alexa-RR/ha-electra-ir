@@ -21,14 +21,31 @@ from homeassistant.components.climate.const import (
     FAN_LOW,
     FAN_MEDIUM,
 )
-from homeassistant.const import UnitOfTemperature
-from homeassistant.core import HomeAssistant
+from homeassistant.const import (
+    STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
+    UnitOfTemperature,
+)
+from homeassistant.core import (
+    Event,
+    EventStateChangedData,
+    HomeAssistant,
+    State,
+    callback,
+)
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from . import ElectraIRConfigEntry
-from .const import CONF_INFRARED_ENTITY_ID, DOMAIN, MAX_TEMP, MIN_TEMP
+from .const import (
+    CONF_INFRARED_ENTITY_ID,
+    CONF_TEMPERATURE_SENSOR,
+    DOMAIN,
+    MAX_TEMP,
+    MIN_TEMP,
+)
 from .electra import ElectraACCommand, ElectraFan, ElectraMode, ElectraState
 
 _LOGGER = logging.getLogger(__name__)
@@ -103,6 +120,11 @@ class ElectraClimate(ClimateEntity, RestoreEntity):
         """Initialize the entity."""
         self._entry = entry
         self._emitter = emitter
+        # Optional external temperature sensor (options flow). IR gives no
+        # feedback, so current_temperature is only known if a sensor is attached.
+        self._sensor_entity_id: str | None = entry.options.get(
+            CONF_TEMPERATURE_SENSOR
+        )
         self._attr_unique_id = entry.entry_id
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
@@ -120,8 +142,19 @@ class ElectraClimate(ClimateEntity, RestoreEntity):
         self._last_mode: ElectraMode = ElectraMode.COOL
 
     async def async_added_to_hass(self) -> None:
-        """Restore the assumed state from the last run."""
+        """Restore the assumed state and start tracking the temperature sensor."""
         await super().async_added_to_hass()
+
+        if self._sensor_entity_id is not None:
+            self.async_on_remove(
+                async_track_state_change_event(
+                    self.hass,
+                    [self._sensor_entity_id],
+                    self._async_sensor_changed,
+                )
+            )
+            self._update_current_temp(self.hass.states.get(self._sensor_entity_id))
+
         if (last_state := await self.async_get_last_state()) is None:
             return
 
@@ -139,6 +172,26 @@ class ElectraClimate(ClimateEntity, RestoreEntity):
 
         if self._attr_hvac_mode in _HVAC_TO_ELECTRA:
             self._last_mode = _HVAC_TO_ELECTRA[self._attr_hvac_mode]
+
+    @callback
+    def _async_sensor_changed(self, event: Event[EventStateChangedData]) -> None:
+        """Handle temperature sensor state changes."""
+        self._update_current_temp(event.data["new_state"])
+        self.async_write_ha_state()
+
+    @callback
+    def _update_current_temp(self, state: State | None) -> None:
+        """Set current_temperature from a sensor state."""
+        if state is None or state.state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
+            return
+        try:
+            self._attr_current_temperature = float(state.state)
+        except (ValueError, TypeError):
+            _LOGGER.warning(
+                "Could not parse temperature '%s' from %s",
+                state.state,
+                self._sensor_entity_id,
+            )
 
     # --- Command building / sending ---------------------------------------
 

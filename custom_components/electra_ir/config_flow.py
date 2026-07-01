@@ -15,7 +15,14 @@ from homeassistant.components.infrared import (
     async_get_emitters,
     async_get_receivers,
 )
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
+from homeassistant.const import Platform
+from homeassistant.core import callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.selector import (
     EntitySelector,
@@ -25,6 +32,7 @@ from homeassistant.helpers.selector import (
 from .const import (
     CONF_INFRARED_ENTITY_ID,
     CONF_INFRARED_RECEIVER_ENTITY_ID,
+    CONF_TEMPERATURE_SENSOR,
     DOMAIN,
 )
 
@@ -33,6 +41,14 @@ class ElectraIrConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Electra AC (IR)."""
 
     VERSION = 2
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(
+        config_entry: ConfigEntry,
+    ) -> ElectraIrOptionsFlow:
+        """Return the options flow."""
+        return ElectraIrOptionsFlow()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -95,3 +111,31 @@ class ElectraIrConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(schema_dict),
             errors=errors,
         )
+
+
+class ElectraIrOptionsFlow(OptionsFlow):
+    """Handle options for Electra AC (IR): attach an existing temperature sensor."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Manage the temperature sensor option."""
+        if user_input is not None:
+            # An omitted/empty selection clears the sensor.
+            return self.async_create_entry(data=user_input)
+
+        current = self.config_entry.options.get(CONF_TEMPERATURE_SENSOR)
+        schema = vol.Schema(
+            {
+                vol.Optional(
+                    CONF_TEMPERATURE_SENSOR,
+                    description={"suggested_value": current},
+                ): EntitySelector(
+                    EntitySelectorConfig(
+                        domain=Platform.SENSOR,
+                        device_class="temperature",
+                    )
+                ),
+            }
+        )
+        return self.async_show_form(step_id="init", data_schema=schema)

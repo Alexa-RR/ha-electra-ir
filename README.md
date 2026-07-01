@@ -30,9 +30,12 @@ any IR emitter exposed to the `infrared` platform — e.g. **Broadlink** or
 
 ## Notes
 
-- **Assumed state.** IR is one-way, so Home Assistant tracks the state it
-  believes the AC is in. If you use the physical remote, the two can drift —
-  set the entity back to match and continue.
+- **Current temperature.** IR is one-way, so the AC reports nothing back. To
+  show a current temperature, open the integration's **Configure** dialog and
+  attach an existing temperature sensor. Leave it empty for none.
+- **Assumed state.** Home Assistant tracks the state it believes the AC is in.
+  If you use the physical remote, the two can drift — set the entity back to
+  match and continue.
 - **Power is a toggle.** The Electra remote's power button toggles on/off. The
   integration only sends that toggle on an actual on↔off transition.
 - **Carrier frequency.** Defaults to 38 kHz (`CARRIER_HZ` in `electra.py`). If
