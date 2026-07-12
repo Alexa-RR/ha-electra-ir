@@ -36,6 +36,10 @@ any IR emitter exposed to the `infrared` platform — e.g. **Broadlink** or
 - **Assumed state.** Home Assistant tracks the state it believes the AC is in.
   If you use the physical remote, the two can drift — set the entity back to
   match and continue.
+- **Power.** The power bit is absolute, not a toggle: any on-state command
+  turns the unit on and applies the settings, and OFF is a dedicated command.
+  The 34-bit encoder is verified byte-for-byte against the captured RC-3 codes
+  in [SmartIR 1946.json](https://github.com/smartHomeHub/SmartIR/blob/master/codes/climate/1946.json).
 - **Power is a toggle.** The Electra remote's power button toggles on/off. The
   integration only sends that toggle on an actual on↔off transition.
 - **Carrier frequency.** Defaults to 38 kHz (`CARRIER_HZ` in `electra.py`). If

@@ -77,9 +77,11 @@ MAX_TEMP = 30
 class ElectraState:
     """The AC state to transmit.
 
-    ``power_toggle`` mirrors the remote's power button: it toggles the unit on
-    or off. Set it only on an on/off transition; leave it ``False`` when merely
-    adjusting an already-running unit.
+    ``off`` is the power bit (bit 33). Verified against captured RC-3 codes
+    (SmartIR 1946), this bit is *not* a toggle: every on/adjust command carries
+    ``off=False`` (bit 33 = 0), and the AC is switched off by sending a command
+    with ``off=True`` (bit 33 = 1). Sending any on-state command turns the unit
+    on and applies the settings.
     """
 
     mode: ElectraMode = ElectraMode.COOL
@@ -88,13 +90,13 @@ class ElectraState:
     swing: bool = False
     sleep: bool = False
     ifeel: bool = False
-    power_toggle: bool = False
+    off: bool = False
 
     def encode(self) -> int:
         """Pack the state into the 34-bit Electra code."""
         temp = max(MIN_TEMP, min(MAX_TEMP, int(self.temperature))) - 15
         num = 0
-        num |= (1 if self.power_toggle else 0) << 33
+        num |= (1 if self.off else 0) << 33
         num |= (int(self.mode) & 0b111) << 30
         num |= (int(self.fan) & 0b11) << 28
         num |= (1 if self.swing else 0) << 25

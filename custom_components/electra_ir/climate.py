@@ -197,14 +197,14 @@ class ElectraClimate(ClimateEntity, RestoreEntity):
 
     # --- Command building / sending ---------------------------------------
 
-    def _build_state(self, power_toggle: bool) -> ElectraState:
+    def _build_state(self, off: bool) -> ElectraState:
         """Build the Electra state from the current entity attributes."""
         return ElectraState(
             mode=self._last_mode,
             fan=_FAN_TO_ELECTRA.get(self._attr_fan_mode, ElectraFan.AUTO),
             temperature=int(self._attr_target_temperature or 24),
             swing=self._attr_swing_mode == SWING_ON,
-            power_toggle=power_toggle,
+            off=off,
         )
 
     async def _async_send(self, state: ElectraState) -> None:
@@ -216,9 +216,9 @@ class ElectraClimate(ClimateEntity, RestoreEntity):
         if inspect.isawaitable(result):
             await result
 
-    async def _async_transmit(self, power_toggle: bool) -> None:
+    async def _async_transmit(self, off: bool) -> None:
         """Encode the current state and send it through the IR emitter."""
-        await self._async_send(self._build_state(power_toggle))
+        await self._async_send(self._build_state(off))
 
     async def async_send_ifeel(self) -> None:
         """Send an iFeel update: current room temperature with the iFeel bit set.
@@ -230,7 +230,7 @@ class ElectraClimate(ClimateEntity, RestoreEntity):
         room_temp = self._attr_current_temperature
         if room_temp is None:
             room_temp = self._attr_target_temperature or 24
-        state = self._build_state(power_toggle=False)
+        state = self._build_state(off=False)
         state.ifeel = True
         state.temperature = int(round(room_temp))
         await self._async_send(state)
@@ -238,21 +238,20 @@ class ElectraClimate(ClimateEntity, RestoreEntity):
     # --- Climate API -------------------------------------------------------
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
-        """Set a new HVAC mode."""
-        was_on = self._attr_hvac_mode != HVACMode.OFF
+        """Set a new HVAC mode.
 
+        The power bit is absolute (not a toggle): any on-state command turns the
+        unit on and applies settings; OFF is a dedicated command.
+        """
         if hvac_mode == HVACMode.OFF:
-            if was_on:
-                # Power button is a toggle; send it to switch the unit off.
-                await self._async_transmit(power_toggle=True)
+            await self._async_transmit(off=True)
             self._attr_hvac_mode = HVACMode.OFF
             self.async_write_ha_state()
             return
 
         self._last_mode = _HVAC_TO_ELECTRA[hvac_mode]
         self._attr_hvac_mode = hvac_mode
-        # Toggle power only when transitioning from off to on.
-        await self._async_transmit(power_toggle=not was_on)
+        await self._async_transmit(off=False)
         self.async_write_ha_state()
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
@@ -287,7 +286,7 @@ class ElectraClimate(ClimateEntity, RestoreEntity):
         """Transmit the current state, but only when the unit is on.
 
         Adjusting temperature/fan/swing while the unit is off only updates the
-        assumed state; the real remote ignores those without powering on.
+        assumed state; nothing is transmitted until it is turned on.
         """
         if self._attr_hvac_mode != HVACMode.OFF:
-            await self._async_transmit(power_toggle=False)
+            await self._async_transmit(off=False)
