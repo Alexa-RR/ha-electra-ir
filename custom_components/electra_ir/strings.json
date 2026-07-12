@@ -6,11 +6,13 @@
         "description": "Select at least one infrared emitter or receiver to use with your Electra air conditioner.",
         "data": {
           "infrared_entity_id": "Infrared emitter",
-          "infrared_receiver_entity_id": "Infrared receiver"
+          "infrared_receiver_entity_id": "Infrared receiver",
+          "temperature_sensor": "Temperature sensor"
         },
         "data_description": {
           "infrared_entity_id": "The infrared emitter entity to use for sending commands to the air conditioner.",
-          "infrared_receiver_entity_id": "The infrared receiver entity to use for keeping the state in sync with the physical remote."
+          "infrared_receiver_entity_id": "The infrared receiver entity to use for keeping the state in sync with the physical remote.",
+          "temperature_sensor": "Optional existing sensor whose value is shown as the current temperature. Can be changed later."
         }
       }
     },

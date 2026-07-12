@@ -87,7 +87,22 @@ class ElectraIrConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
                 title = f"Electra AC via {title_entity_name}"
 
-                return self.async_create_entry(title=title, data=user_input)
+                # IR entities live in data; the temperature sensor lives in
+                # options, matching where the options flow stores it.
+                data = {
+                    key: user_input[key]
+                    for key in (
+                        CONF_INFRARED_ENTITY_ID,
+                        CONF_INFRARED_RECEIVER_ENTITY_ID,
+                    )
+                    if key in user_input
+                }
+                options = {}
+                if sensor := user_input.get(CONF_TEMPERATURE_SENSOR):
+                    options[CONF_TEMPERATURE_SENSOR] = sensor
+                return self.async_create_entry(
+                    title=title, data=data, options=options
+                )
 
             errors["base"] = "missing_infrared_entity"
 
@@ -102,6 +117,12 @@ class ElectraIrConfigFlow(ConfigFlow, domain=DOMAIN):
                 EntitySelectorConfig(
                     domain=INFRARED_DOMAIN,
                     include_entities=receiver_entity_ids,
+                )
+            ),
+            vol.Optional(CONF_TEMPERATURE_SENSOR): EntitySelector(
+                EntitySelectorConfig(
+                    domain=Platform.SENSOR,
+                    device_class="temperature",
                 )
             ),
         }
